@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VLM 文档解析架构演进：从"感官精度"到"逻辑对齐"</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5/github-markdown-light.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <style>
+    body{font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;background:#fff;color:#1a1a1a;margin:0;padding:0;line-height:1.85;}
+    header{padding:48px 24px 32px;text-align:center;border-bottom:1px solid #e5e5e5;}
+    .tag{display:inline-block;border:1px solid #e5e5e5;border-radius:3px;padding:3px 12px;font-size:12px;color:#888;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+    header h1{font-size:clamp(28px,4vw,40px);font-weight:600;margin:0 0 12px;}
+    header p{color:#555;max-width:760px;margin:0 auto 16px;}
+    .links{font-size:14px;color:#888;}
+    .links a{color:#333;text-decoration:none;border-bottom:1px solid #ccc;}
+    .links a:hover{color:#000;border-bottom-color:#333;}
+    main.markdown-body{max-width:860px;margin:0 auto;padding:48px 24px 64px;background:#fff;}
+    main.markdown-body img{max-width:100%;height:auto;}
+    footer{border-top:1px solid #e5e5e5;text-align:center;color:#888;font-size:13px;padding:24px;}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="tag">Technical Blog · Qianfan</div>
+    <h1>VLM 文档解析架构演进：从"感官精度"到"逻辑对齐"</h1>
+    <p>像素主权之争——Qianfan-OCR 视觉编码器架构设计的核心思考</p>
+    <div class="links"><a href="../index.html">返回千帆技术成果</a> · 中文 | <a href="index.html">English</a></div>
+  </header>
+  <main class="markdown-body" id="content">Loading…</main>
+  <footer>百度智能云千帆 · Qianfan</footer>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <script>
+    fetch("anyresvit_for_doc_parsing.md").then(r=>r.text()).then(md=>{
+      document.getElementById("content").innerHTML=marked.parse(md);
+      if(window.renderMathInElement){renderMathInElement(document.getElementById("content"),{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]});}
+      else{window.addEventListener("load",()=>{renderMathInElement(document.getElementById("content"),{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]});});}
+    }).catch(e=>{document.getElementById("content").textContent="Failed to load content: "+e;});
+  </script>
+</body>
+</html>
