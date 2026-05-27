@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Building KIE Datasets | Key Information Extraction</title>
+  <style>
+    :root {
+      --text: #1a1a1a;
+      --text-sub: #555;
+      --text-muted: #888;
+      --border: #e5e5e5;
+      --bg: #fff;
+      --bg-alt: #fafafa;
+      --accent: #333;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.85;
+      font-size: 16px;
+    }
+
+    /* ─── Header ─── */
+    header {
+      background: var(--bg);
+      color: var(--text);
+      padding: 64px 24px 48px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-tag {
+      display: inline-block;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 3px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    header h1 {
+      font-size: clamp(26px, 4.5vw, 40px);
+      font-weight: 800;
+      margin-bottom: 14px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+    header p {
+      font-size: 16px;
+      color: var(--text-sub);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+    .page-links {
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .page-links a {
+      color: var(--text-sub);
+      text-decoration: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .page-links a:hover { color: var(--text); border-bottom-color: var(--text); }
+
+    /* ─── TOC ─── */
+    .toc-bar {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .toc-bar ul {
+      display: flex;
+      justify-content: center;
+      list-style: none;
+      max-width: 860px;
+      margin: 0 auto;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 0 16px;
+    }
+    .toc-bar ul::-webkit-scrollbar { display: none; }
+    .toc-bar li a {
+      display: block;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .toc-bar li a:hover {
+      color: var(--text);
+      border-bottom-color: var(--text);
+    }
+
+    /* ─── Layout ─── */
+    main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ─── Section ─── */
+    section { margin-bottom: 56px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-num {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      letter-spacing: 0.5px;
+    }
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 28px 0 10px;
+    }
+    p {
+      color: var(--text-sub);
+      margin-bottom: 14px;
+    }
+
+    /* ─── Task Cards ─── */
+    .task-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 20px 0;
+    }
+    @media (max-width: 640px) { .task-grid { grid-template-columns: 1fr; } }
+    .task-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+      background: var(--bg);
+    }
+    .task-card::before { display: none; }
+    .task-card .card-icon { font-size: 22px; margin-bottom: 10px; }
+    .task-card h4 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .task-card .en {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      font-family: monospace;
+    }
+    .task-card p { font-size: 14px; margin: 0; color: var(--text-sub); }
+
+    /* ─── Image ─── */
+    .img-gallery {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    @media (max-width: 540px) { .img-gallery { grid-template-columns: 1fr; } }
+    .img-frame {
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .img-frame img { width: 100%; display: block; }
+    .img-frame .img-caption {
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      background: var(--bg-alt);
+    }
+    .img-single {
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin: 20px 0;
+    }
+    .img-single img { width: 100%; display: block; }
+    .img-single .img-caption {
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      background: var(--bg-alt);
+    }
+
+    /* ─── Callout (unified) ─── */
+    .callout {
+      border-radius: 4px;
+      padding: 16px 18px;
+      margin: 18px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+    }
+    .callout.info, .callout.warning, .callout.success {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-left: 3px solid #bbb;
+    }
+    .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; opacity: 0.6; }
+    .callout p { margin: 0; font-size: 14px; }
+
+    /* ─── Pipeline Stages ─── */
+    .pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .stage {
+      border-radius: 4px;
+      padding: 16px 20px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .stage-badge {
+      min-width: 36px;
+      height: 24px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .stage-body h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+    .stage-body p { font-size: 13.5px; margin: 0; color: var(--text-sub); }
+
+    /* ─── Steps ─── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin: 18px 0;
+      position: relative;
+    }
+    .steps::before {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 36px;
+      bottom: 36px;
+      width: 1px;
+      background: var(--border);
+    }
+    .step {
+      display: flex;
+      gap: 14px;
+      padding: 12px 0;
+    }
+    .step-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      flex-shrink: 0;
+      z-index: 1;
+      background: var(--bg);
+    }
+    .step-content { padding-top: 4px; }
+    .step-content h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+    .step-content p { font-size: 13.5px; color: var(--text-sub); margin: 0; }
+
+    /* ─── Check List ─── */
+    .check-list {
+      list-style: none;
+      margin: 14px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .check-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 14px;
+      color: var(--text-sub);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px 14px;
+    }
+    .check-list li::before {
+      content: "—";
+      color: var(--text-muted);
+      font-weight: 400;
+      flex-shrink: 0;
+    }
+
+    /* ─── Code ─── */
+    code {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: "SF Mono", "JetBrains Mono", monospace;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    /* ─── Chips ─── */
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 10px 0;
+    }
+    .chip {
+      background: var(--bg-alt);
+      color: var(--text-sub);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 3px 10px;
+      font-size: 13px;
+    }
+
+    /* ─── Divider ─── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 40px 0;
+    }
+
+    /* ─── Highlight Box ─── */
+    .highlight-box {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .highlight-box p { margin: 0; font-size: 14px; color: var(--text-sub); }
+
+    /* ─── Two-col ─── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 18px 0;
+    }
+    @media (max-width: 580px) { .two-col { grid-template-columns: 1fr; } }
+    .mini-card {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px;
+    }
+    .mini-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .mini-card p { font-size: 13.5px; margin: 0; color: var(--text-sub); }
+
+    /* ─── Footer ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ─── Bold ─── */
+    strong { color: var(--text); }
+
+    /* ─── Data Table ─── */
+    .data-table-wrap {
+      margin: 20px 0;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .data-table-wrap .table-title {
+      background: var(--bg-alt);
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    .data-table-wrap th {
+      background: var(--bg-alt);
+      padding: 8px 14px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table-wrap td {
+      padding: 8px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      color: var(--text-sub);
+    }
+    .data-table-wrap tr:last-child td { border-bottom: none; }
+    .data-table-wrap .placeholder { color: #aaa; font-style: italic; }
+    .improve { color: var(--text); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-tag">Technical Blog · Document AI</div>
+  <h1>Practical Guide to Building KIE Datasets</h1>
+  <p>A systematic look at data engineering for Key Information Extraction (KIE), from high-quality annotation pipelines to semantic generalization and finely tuned rejection behavior.</p>
+  <div class="page-links"><a href="../index_en.html">Back to Qianfan Technical Hub</a> · <a href="index_zh.html">中文</a> | English</div>
+</header>
+
+<!-- TOC -->
+<nav class="toc-bar">
+  <ul>
+    <li><a href="#background">Background &amp; Task Definition</a></li>
+    <li><a href="#data-build">High-Quality Data Construction</a></li>
+    <li><a href="#key-generalize">Key Semantic Generalization</a></li>
+    <li><a href="#rejection">Rejection Capability Optimization</a></li>
+    <li><a href="#conclusion">Conclusion &amp; Outlook</a></li>
+  </ul>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+  <!-- Abstract -->
+  <section id="abstract" style="margin-bottom:48px;">
+    <div class="highlight-box" style="border-left:4px solid var(--primary);border:1px solid #bfdbfe;border-left:4px solid var(--primary);">
+      <p style="font-size:15.5px;line-height:1.9;">
+        Traditional OCR-specialized models have long focused on text recognition itself and generally lack the ability to extract structured key information from documents. General-purpose VLMs show promise for KIE, but their accuracy in professional OCR scenarios is often unsatisfactory. <strong>QianfanOCR</strong> aims to break this tradeoff: it keeps OCR accuracy at the level of specialized models while making KIE a core model capability. This article shares the key engineering practices behind our KIE dataset construction, including a <strong>full-chain high-quality data construction system covering hybrid labeling, rule-based cleaning, and distribution enhancement</strong>, which forms a closed loop from label synthesis and quality screening to sample optimization, substantially reducing hallucinations while improving data quality and scenario coverage; a <strong>semantic generalization strategy driven by synonymous Key replacement</strong>, which helps the model move beyond literal matching and adapt to diverse field expressions; and a <strong>four-stage automated rejection-sample generation pipeline</strong>, which teaches the model to say "no" when a requested field is invalid. Experiments show meaningful gains in recall, extraction accuracy, and rejection precision.
+      </p>
+    </div>
+  </section>
+
+  <!-- Background and task definition -->
+  <section id="background">
+    <div class="section-header">
+      <div class="section-num">01</div>
+      <h2>Background &amp; Task Definition</h2>
+    </div>
+
+    <p>
+      In document intelligence, <strong>Key Information Extraction (KIE)</strong> is the core step that connects "visual perception" with "structured output". Its goal is to convert visually scattered information in document images into machine-consumable <strong>Key-Value JSON</strong>. Depending on task scope and the depth of semantic understanding required, KIE tasks can usually be divided into two major types:
+    </p>
+
+    <div class="task-grid">
+      <div class="task-card full">
+        <div class="card-icon">A.</div>
+        <h4>Full Extraction</h4>
+        <div class="en">Full Extraction / OCR-to-Structured</div>
+        <p>This task emphasizes "what you see is what you get": the model must capture all visible key-value information in the image. In a physical examination report, for example, the model must accurately identify each test item along with its indicator, value, and unit. The main difficulties are spatial association modeling under complex layouts and preserving completeness in long-sequence outputs.</p>
+      </div>
+      <div class="task-card targeted">
+        <div class="card-icon">B.</div>
+        <h4>Targeted Field Extraction</h4>
+        <div class="en">Targeted Field Extraction / Semantic Alignment</div>
+        <p>This task extracts information according to a user-defined field list. Compared with full extraction, it places higher demands on the model's <strong>semantic understanding and cross-template generalization</strong>. The model must not only recognize text, but also understand the implicit semantic mapping between user fields and the original wording in the image.</p>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">*</div>
+      <p>Typical scenario: in a medical insurance settlement form, the user may request <strong>"Admission Time"</strong>, while the original document records it as <strong>"Admission Date"</strong>. Similarly, <strong>"Medical Insurance Payment"</strong> may correspond to <strong>"Total Fund Payment"</strong>. Different wording, same meaning - this is the central challenge in targeted field extraction.</p>
+    </div>
+
+    <div class="img-gallery">
+      <div class="img-frame">
+        <img src="figures/full-extraction.png" alt="Full extraction example" />
+        <div class="img-caption">Full extraction: outputting Key-Value structured information in JSON format</div>
+      </div>
+      <div class="img-frame">
+        <img src="figures/targeted-field-extraction.png" alt="Targeted field extraction example" />
+        <div class="img-caption">Targeted field extraction: extracting invoice number, issue date, total amount, and other requested fields</div>
+      </div>
+    </div>
+
+    <h3>Why Do We Need an End-to-End VLM?</h3>
+    <p>Traditional OCR-specialized vision-language models, such as dotsocr and glm-ocr, are constrained by their training paradigms and model scale. They usually handle only text recognition and struggle with structured information extraction. The seemingly reasonable two-stage "OCR + LLM" pipeline has a fundamental flaw: <strong>layout information is silently lost in the intermediate step</strong>, which causes a series of hard-to-fix cascading problems. Two typical examples are listed below:</p>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <h4>📌 Issue 1: Key-Value Misalignment</h4>
+        <p>After OCR converts the image into text, the spatial topology of the original layout collapses. The model can easily pair unrelated keys and values, producing extraction results with mismatched fields.</p>
+      </div>
+      <div class="mini-card">
+        <h4>📌 Issue 2: Cascading Errors in Complex Tables</h4>
+        <p>In complex tables with multiple rows and columns, even a small alignment error in the OCR stage can be amplified by the downstream LLM, eventually creating an avalanche of errors that is difficult to trace.</p>
+      </div>
+    </div>
+
+    <p style="font-size:13px;color:var(--text-muted);margin-top:8px;">Beyond these examples, semantic recovery under stamp occlusion, cross-page content aggregation, and unified understanding of mixed handwriting and printed text can all lose information at the "OCR -> LLM" handoff. These issues are only the tip of the iceberg.</p>
+
+    <div class="img-gallery">
+      <div class="img-frame">
+        <img src="figures/key-value-misalignment.png" alt="Key-Value misalignment" />
+        <div class="img-caption">Example of Key-Value misalignment</div>
+      </div>
+      <div class="img-frame">
+        <img src="figures/complex-table-errors.png" alt="Complex table extraction" />
+        <div class="img-caption">Cascading-error problem in complex table scenarios</div>
+      </div>
+    </div>
+
+    <div class="callout success">
+      <div class="callout-icon">*</div>
+      <p>An end-to-end VLM, such as <strong>QianfanOCR</strong>, integrates perception, understanding, and structured extraction, performing inference directly on the image. This avoids information loss introduced by intermediate steps and shows clear advantages over two-stage pipelines in Key-Value alignment accuracy and robustness on complex tables.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- High-quality training data construction -->
+  <section id="data-build">
+    <div class="section-header">
+      <div class="section-num">02</div>
+      <h2>Building High-Quality Training Data</h2>
+    </div>
+
+    <p>Data defines the ceiling of model capability. For the two core tasks of full extraction and targeted field extraction, we built an end-to-end high-quality data production process around three dimensions: <strong>data synthesis, annotation quality, and cleaning standards</strong>. The goal is not only to have data, but to have good data.</p>
+
+    <div class="img-single">
+      <img src="figures/data-construction-pipeline.png" alt="Data construction pipeline" />
+      <div class="img-caption">Figure 1: Overall pipeline for building high-quality training data</div>
+    </div>
+
+    <h3>Data Synthesis Stage</h3>
+    <p>Our initial idea was to use a large teacher model to generate annotated data, or GT, in batches. Practice led to a different conclusion: under complex conditions such as blur, rotation, deformation, and watermark interference, the teacher model's hallucination rate rose sharply. Missing fields and recognition errors appeared repeatedly, making annotation quality hard to guarantee.</p>
+
+    <div class="callout warning">
+      <div class="callout-icon">*</div>
+      <p>We therefore moved to a more robust <strong>Hybrid Labeling Approach</strong>. A traditional lightweight OCR model is introduced as an auxiliary labeling tool to complement the teacher model. Cross-validation filters out low-confidence samples, and a dedicated evaluation set for these hard cases is maintained for continuous monitoring. Experiments show that this approach brings meaningful gains in both recall and hallucination suppression.</p>
+    </div>
+
+    <p>We built a hard-case evaluation set for scenarios such as blur, rotation, and watermarks, then compared the recall of the two labeling strategies on structured field extraction. On high-frequency document types such as ID/card documents and invoices, the hybrid labeling approach significantly improved recall while greatly suppressing hallucinated outputs from the teacher model on hard samples.</p>
+
+    <div class="data-table-wrap">
+      <div class="table-title">Table 1: Hybrid labeling vs. teacher-only model - recall comparison in complex scenarios</div>
+      <table>
+        <thead><tr>
+          <th>Document Type</th>
+          <th>Teacher-Only Model</th>
+          <th>Hybrid Labeling</th>
+          <th>Gain</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>ID/Card Documents</td>
+            <td>~89%</td>
+            <td>~98%</td>
+            <td><span class="improve">about +9 pp</span></td>
+          </tr>
+          <tr>
+            <td>Receipts &amp; Invoices</td>
+            <td>~85%</td>
+            <td>~94%</td>
+            <td><span class="improve">about +9 pp</span></td>
+          </tr>
+          <tr>
+            <td><strong>Overall Average</strong></td>
+            <td colspan="2" style="text-align:center;color:var(--text-muted);">Absolute recall improvement</td>
+            <td><strong><span class="improve">about +10 pp</span></strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Data Cleaning Stage</h3>
+    <p>Completing annotation is not enough. We established a large-scale rule-filtering system aligned with business semantics. Each training sample goes through two strict compliance checks, preventing dirty data from entering the training set at the source:</p>
+
+    <ul class="check-list">
+      <li><strong>Computational consistency check:</strong> automatically identifies and removes numeric self-consistency errors such as "unit price x quantity != total amount", ensuring arithmetic relationships between fields are valid</li>
+      <li><strong>Format compliance check:</strong> verifies structured fields such as invoice numbers, date formats, and ID numbers against industry standards, filtering abnormal samples that do not meet the rules</li>
+    </ul>
+
+    <div class="highlight-box">
+      <p>The two checks form a serial filtering gate: if either check fails, the sample is discarded. Only samples that pass both checks enter the final training set. This strict admission standard gives <strong>High Quality Training Data</strong> high accuracy and strong consistency, creating a solid data foundation for model training.</p>
+    </div>
+
+    <p>To quantify the real benefit of data cleaning, we ran an ablation study on an in-house multi-scenario KIE evaluation set covering seven high-frequency verticals, including bank receipts, VAT invoices, medical settlement forms, and medical invoices:</p>
+
+    <div class="data-table-wrap">
+      <div class="table-title">Table 2: Impact of data cleaning on overall model performance (average score on in-house evaluation set)</div>
+      <table>
+        <thead><tr>
+          <th>Method</th>
+          <th>Average Score</th>
+          <th>Change</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>Raw Data (Baseline)</td>
+            <td>~58.4</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>+ Data Cleaning (computational logic + format filtering)</td>
+            <td><strong>~62.3</strong></td>
+            <td><span class="improve">about +3.9</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">*</div>
+      <p>Rule filtering alone increased the model's average score across seven in-house subtasks by <strong>about 3.9 points overall</strong>, with stable positive gains on every subtask. The benefit is especially clear in long-tail scenarios with complex layouts and dense fields. This confirms a simple point: <strong>the cleanliness of training data has a greater impact on the model ceiling than simply piling up more data</strong>.</p>
+    </div>
+
+    <h3>Sample Optimization: Distribution Reshaping and Image Augmentation</h3>
+    <p>Annotation and cleaning ensure that data quality is high enough. Sample optimization ensures that coverage is broad enough. We further optimized the dataset from two angles: <strong>data distribution reshaping</strong> and <strong>image-level augmentation</strong>.</p>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <h4>📊 Data Distribution Optimization</h4>
+        <p>We actively mine and supplement difficult samples such as long-sequence details, dense layouts, and multi-level nested structures. Training ratios are dynamically adjusted according to scenario distribution. The weight of simple samples is intentionally reduced so the model faces boundary cases during training instead of staying in a comfort zone.</p>
+      </div>
+      <div class="mini-card">
+        <h4>🔄 Image Augmentation Strategy</h4>
+        <p>We systematically introduce geometric transformations, including rotation, perspective distortion, and crop jitter, as well as image degradation simulations such as blur, noise, low resolution, and watermark occlusion. This exposes the model to realistic disturbances during training, helping it remain stable on scanned and photographed documents.</p>
+      </div>
+    </div>
+
+    <div class="callout success">
+      <div class="callout-icon">*</div>
+      <p>The two dimensions reinforce each other. Distribution-level supplementation solves limited exposure, while augmentation-level disturbance simulation improves resistance to interference. Together, they raise the model's <strong>robustness and generalization</strong> in complex real-world scenarios.</p>
+    </div>
+
+    <p>First, consider the effect of <strong>distribution reshaping</strong>. We adjusted the training-sample ratio by layout complexity so the model received sufficient training on long-tail complex layouts. Results show that <strong>F1 on the target scenario increased steadily by about 0.7 points</strong>, while other scenarios were largely unchanged. This suggests that distribution reshaping can precisely improve the target layout without introducing negative transfer.</p>
+
+    <p>Next, consider the effect of <strong>image augmentation</strong>. We replaced samples from key scenarios in the training set with augmented versions covering rotation, blur, watermark occlusion, and other disturbances, while keeping all other training data unchanged. The results are shown below:</p>
+
+    <div class="data-table-wrap">
+      <div class="table-title">Table 3: Targeted ablation results for image augmentation</div>
+      <table>
+        <thead><tr>
+          <th>Evaluation Scope</th>
+          <th>Change</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>Augmented target scenarios</td>
+            <td><span class="improve">F1 improves by about +2 to +4</span></td>
+          </tr>
+          <tr>
+            <td>Other scenarios without augmentation</td>
+            <td>Roughly unchanged (no negative transfer)</td>
+          </tr>
+          <tr>
+            <td><strong>Overall Average</strong></td>
+            <td><strong><span class="improve">about +1.1</span></strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">*</div>
+      <p>The gains are highly concentrated in the <strong>augmented target scenarios</strong>, while other categories remain basically unchanged. This creates a clean causal chain from targeted augmentation to targeted benefit, with overall average F1 improving by about 1.1 points.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Key semantic generalization -->
+  <section id="key-generalize">
+    <div class="section-header">
+      <div class="section-num">03</div>
+      <h2>Key Semantic Generalization for Stronger Generalization</h2>
+    </div>
+
+    <p>In real business scenarios, the same information field often appears in many different expressions. "Admission Date" and "Admission Time" can share the same meaning, but they are different strings. If the training data contains only one expression, the model may fail when it encounters an unfamiliar one, causing the match rate to drop sharply.</p>
+    <p>To overcome this bottleneck, we designed a <strong>data augmentation strategy based on synonymous Key replacement</strong>. By systematically expanding the expression space of fields, the model learns to understand meaning instead of memorizing literal strings:</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-dot">1</div>
+        <div class="step-content">
+          <h4>Synonymous Key Generation</h4>
+          <p>A large language model semantically expands the original field names and automatically generates candidates with equivalent meanings but varied wording. This builds a broad synonym table for each original Key, creating the source material for subsequent data augmentation.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-dot">2</div>
+        <div class="step-content">
+          <h4>Random Key Replacement for Training Samples</h4>
+          <p>During data construction, field names in the Prompt are randomly replaced, with a certain probability, by alternative expressions from the synonym table. This generates large numbers of training samples where the user's wording differs from the wording in the image. The Prompt also explicitly guides the model to focus on semantic correspondence rather than string matching, fundamentally changing what the model learns.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Synonym Expansion Examples</h3>
+    <div class="two-col">
+      <div class="mini-card">
+        <h4>Admission Date -></h4>
+        <div class="chips">
+          <span class="chip">Admission Time</span>
+          <span class="chip">Hospitalization Start Date</span>
+          <span class="chip">Admission Timestamp</span>
+        </div>
+      </div>
+      <div class="mini-card">
+        <h4>Total Fund Payment -></h4>
+        <div class="chips">
+          <span class="chip">Medical Insurance Payment</span>
+          <span class="chip">Insurance Reimbursement Amount</span>
+          <span class="chip">Pooled Fund Payment</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="img-single">
+      <img src="figures/semantic-generalization.png" alt="Semantic generalization example" />
+      <div class="img-caption">Semantic mapping on a medical insurance settlement form: user field -> source field in the image -> JSON output</div>
+    </div>
+
+    <div class="callout success">
+      <div class="callout-icon">*</div>
+      <p>After this augmentation training, the model no longer depends on literal alignment. It builds a real <strong>semantic recognition capability for differently named but equivalent fields</strong>. When facing user-defined field expressions, the model maintains stable and accurate extraction output, achieving a qualitative improvement in open field-definition scenarios.</p>
+    </div>
+
+    <p>To quantify the additional benefit of diversified Key sampling, we added synonymous Key replacement on top of the data-cleaned version and compared the results before and after:</p>
+
+    <div class="data-table-wrap">
+      <div class="table-title">Table 4: Additional benefit of diversified Key sampling (average score on in-house evaluation set)</div>
+      <table>
+        <thead><tr>
+          <th>Method</th>
+          <th>Average Score</th>
+          <th>Change</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>After Data Cleaning (Baseline)</td>
+            <td>~62.3</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>+ Diversified Key Sampling</td>
+            <td><strong>~64.0</strong></td>
+            <td><span class="improve">about +1.7</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <p>After data cleaning had already pushed the score to ~62.3, <strong>diversified Key sampling brought another improvement of about 1.7 points</strong>, completing the final piece of field semantic generalization. Combined with the +3.9 gain from data cleaning, the two strategies deliver an overall gain of about +5.5, with stable positive results across all subtasks.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Rejection capability optimization -->
+  <section id="rejection">
+    <div class="section-header">
+      <div class="section-num">04</div>
+      <h2>Rejection Capability Optimization for Better Boundary Recognition</h2>
+    </div>
+
+    <p>A trustworthy KIE system must have two distinct but equally important abilities: accurately extracting fields that exist, and decisively rejecting <strong>fields that do not exist</strong>. If the model makes up an answer instead of honestly rejecting an invalid query, hallucinated output can quietly pollute the entire structured result.</p>
+    <p>To address this weakness systematically, we designed a <strong>VLM-based automated rejection-sample generation pipeline</strong>. The pipeline constructs diverse, high-quality rejection training samples in batches through four stages:</p>
+
+    <div class="pipeline">
+      <div class="stage">
+        <div class="stage-badge">Stage 1</div>
+        <div class="stage-body">
+          <h4>Rejection Instruction Generation</h4>
+          <p>Based on the image content, the model analyzes the context and style of the original Prompt, then naturally inserts rejection instructions into a new Prompt through six embedding styles, such as an opening note, caution statement, or output-format constraint. At the same time, a rejection value is randomly selected from 16 multilingual options, such as <code>"None"</code>, <code>"N/A"</code>, and <code>"This field does not exist"</code>, ensuring the model learns multiple ways to politely and firmly say no.</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-badge">Stage 2</div>
+        <div class="stage-body">
+          <h4>Rejection Key Generation</h4>
+          <p>After observing the image, the model generates two representative types of rejection fields: <strong>empty-value Keys</strong>, where the field exists in the image but its corresponding value is empty, and <strong>false Keys</strong>, which are related to the document topic but do not actually appear in the image. These two field types closely simulate common business cases where users over-ask or guess fields.</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-badge">Stage 3</div>
+        <div class="stage-body">
+          <h4>Key Position Randomization</h4>
+          <p>Based on the real distribution of fields in the image, rejection Keys are randomly inserted among the original field sequence instead of being concentrated at the beginning or end. This deliberately breaks positional patterns, preventing the model from learning shortcuts such as "fields at the end should be rejected" and preserving natural field ordering and generalization.</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-badge">Stage 4</div>
+        <div class="stage-body">
+          <h4>Final Sample Generation</h4>
+          <p>The original GT is used as an anchor to keep existing field values accurate. Rejection fields are filled with the currently specified rejection value. The output field order is strictly aligned with the Prompt, producing a complete training sample with standardized format and reliable annotations.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">🔍</div>
+      <p>Each of the four stages independently uses image content in its decision-making process, maximizing the accuracy and diversity of every annotated sample. After large-scale production with this pipeline, the model's <strong>rejection accuracy</strong> when facing invalid fields improves significantly, and the probability of hallucinated output is effectively suppressed. The model finally learns to know what it knows and what it does not.</p>
+    </div>
+
+    <div class="data-table-wrap">
+      <div class="table-title">Table 5: Effect of rejection optimization on hallucination-rate suppression (in-house evaluation set)</div>
+      <table>
+        <thead><tr>
+          <th>Core Metric</th>
+          <th>Meaning</th>
+          <th>Before</th>
+          <th>After</th>
+          <th>Change</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Hallucination Rate (Fabrication)</strong> ↓</td>
+            <td>Fabricates values for fields that are not present in the image</td>
+            <td>~24%</td>
+            <td><strong>~4%</strong></td>
+            <td><span class="improve">about -20 pp (relative -85%)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">*</div>
+      <p>In short, rejection optimization turns the model from one that <strong>guesses</strong> into one that <strong>can say "I don't know"</strong>. The hallucination rate drops from about one quarter to below one twenty-fifth, without harming the original character-recognition capability.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Conclusion and outlook -->
+  <section id="conclusion">
+    <div class="section-header">
+      <div class="section-num">05</div>
+      <h2>Conclusion &amp; Outlook</h2>
+    </div>
+
+    <p>This article focuses on data engineering practice for end-to-end VLMs in Key Information Extraction scenarios. It systematically explains our core methods and key lessons across the full data construction pipeline. The main contributions can be summarized in three points:</p>
+
+    <ul class="check-list">
+      <li><strong>Full-chain high-quality data construction:</strong> We built a complete data production system covering "hybrid labeling -> rule-based cleaning -> distribution reshaping and image augmentation". Teacher models and small OCR models collaborate to suppress hallucinations, dual checks ensure data compliance, and distribution optimization plus multi-dimensional augmentation improve scenario coverage, raising both training-data quality and diversity end to end.</li>
+      <li><strong>Synonymous Key semantic generalization:</strong> LLM-driven synonym expansion and random replacement help the model move away from literal string matching and achieve stable semantic alignment in open field-definition scenarios.</li>
+      <li><strong>Four-stage rejection pipeline:</strong> Automated construction of diverse rejection training samples gives the model the ability to honestly reject invalid fields and effectively suppress hallucinated output.</li>
+    </ul>
+
+    <h3>Final Results: Public Benchmark Evaluation</h3>
+    <p>To verify the combined effect of these data engineering strategies, we evaluated QianfanOCR against mainstream commercial models and open-source models of similar scale on five public KIE benchmarks. Traditional OCR-specialized models are not included because they lack native KIE capability. The results are shown below:</p>
+
+    <div class="data-table-wrap">
+      <div class="table-title">Table 6: Public KIE benchmark performance comparison (normalized scores)</div>
+      <table>
+        <thead><tr>
+          <th>Model</th><th>Overall (Mean)</th><th>OCRBench KIE</th><th>OCRBenchv2 KIE (en)</th><th>OCRBenchv2 KIE (zh)</th><th>CCOCR KIE</th><th>Nanonets KIE (F1)</th>
+        </tr></thead>
+        <tbody>
+          <tr><td><strong>Qianfan-OCR (Ours)</strong></td><td><strong>87.9</strong></td><td>95.0</td><td>82.8</td><td><strong>82.3</strong></td><td>92.8</td><td><strong>86.5</strong></td></tr>
+          <tr><td>Qwen3-4B-VL</td><td>83.5</td><td>89.0</td><td>82.1</td><td>71.3</td><td>91.6</td><td>83.3</td></tr>
+          <tr><td>Qwen3-VL-235B-A22B</td><td>84.2</td><td>94.0</td><td>85.6</td><td>62.9</td><td><strong>95.1</strong></td><td>83.8</td></tr>
+          <tr><td>Gemini-3.1-Pro</td><td>79.2</td><td><strong>96.0</strong></td><td><strong>87.8</strong></td><td>63.4</td><td>72.5</td><td>76.1</td></tr>
+          <tr><td>Gemini-3-Pro</td><td>77.0</td><td>93.5</td><td>87.1</td><td>49.6</td><td>72.7</td><td>82.1</td></tr>
+          <tr><td>Seed-2.0</td><td>78.0</td><td>92.5</td><td>75.6</td><td>48.9</td><td>89.6</td><td>83.4</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">*</div>
+      <p>QianfanOCR achieves the highest overall average score, <strong>87.9</strong>, across the five KIE benchmarks, outperforming larger commercial and open-source models such as Qwen3-VL-235B-A22B (84.2) and Gemini-3.1-Pro (79.2). Its advantage is especially clear in Chinese KIE scenarios (OCRBenchv2 KIE zh: 82.3), where it is 11 points higher than the next-best Qwen3-4B-VL (71.3), demonstrating the strong gains brought by this data engineering approach for Chinese document understanding.</p>
+    </div>
+
+    <h3>Current Limitations and Future Directions</h3>
+    <p>Although these strategies have already delivered meaningful improvements in real business scenarios, there is still room for further exploration:</p>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <h4>📐 Limitations</h4>
+        <p>The current data construction process still relies heavily on rule-driven cleaning logic and heuristic augmentation strategies. When facing entirely new document types, a certain amount of manual adaptation is still required. In addition, while rejection capability has improved significantly, the model can still make mistakes in extremely blurry or highly ambiguous scenarios.</p>
+      </div>
+      <div class="mini-card">
+        <h4>🔮 Future Directions</h4>
+        <p>We are exploring the introduction of <strong>reinforcement learning (RL)</strong> into the KIE training process. Reward modeling can further optimize the balance between structured-output completeness and rejection precision. We also plan to use active learning to create an adaptive data-production loop, allowing the model to identify its own weaknesses and drive data supplementation, reducing dependence on manual annotation.</p>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">📝</div>
+      <p>KIE is a key step in turning document intelligence into practical business value. We believe that as data engineering methodology continues to evolve and model architectures keep advancing, end-to-end VLMs will unlock even greater potential in document understanding: not only seeing clearly, but also reading deeply, extracting accurately, and rejecting properly.</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <p>Technical Blog on KIE Dataset Construction &nbsp;·&nbsp; QianfanOCR &nbsp;·&nbsp; Document AI Team</p>
+  <p style="margin-top:6px;font-size:12px;">Covering full extraction · targeted field extraction · hybrid labeling · Key semantic generalization · rejection capability optimization</p>
+</footer>
+
+</body>
+</html>

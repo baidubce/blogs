@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KIE 数据集构建 | Key Information Extraction</title>
+  <style>
+    :root {
+      --text: #1a1a1a;
+      --text-sub: #555;
+      --text-muted: #888;
+      --border: #e5e5e5;
+      --bg: #fff;
+      --bg-alt: #fafafa;
+      --accent: #333;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.85;
+      font-size: 16px;
+    }
+
+    /* ─── Header ─── */
+    header {
+      background: var(--bg);
+      color: var(--text);
+      padding: 64px 24px 48px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-tag {
+      display: inline-block;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 3px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    header h1 {
+      font-size: clamp(26px, 4.5vw, 40px);
+      font-weight: 800;
+      margin-bottom: 14px;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+    header p {
+      font-size: 16px;
+      color: var(--text-sub);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+    .page-links {
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .page-links a {
+      color: var(--text-sub);
+      text-decoration: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .page-links a:hover { color: var(--text); border-bottom-color: var(--text); }
+
+    /* ─── TOC ─── */
+    .toc-bar {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .toc-bar ul {
+      display: flex;
+      justify-content: center;
+      list-style: none;
+      max-width: 860px;
+      margin: 0 auto;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 0 16px;
+    }
+    .toc-bar ul::-webkit-scrollbar { display: none; }
+    .toc-bar li a {
+      display: block;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .toc-bar li a:hover {
+      color: var(--text);
+      border-bottom-color: var(--text);
+    }
+
+    /* ─── Layout ─── */
+    main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ─── Section ─── */
+    section { margin-bottom: 56px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-num {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      letter-spacing: 0.5px;
+    }
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 28px 0 10px;
+    }
+    p {
+      color: var(--text-sub);
+      margin-bottom: 14px;
+    }
+
+    /* ─── Task Cards ─── */
+    .task-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 20px 0;
+    }
+    @media (max-width: 640px) { .task-grid { grid-template-columns: 1fr; } }
+    .task-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+      background: var(--bg);
+    }
+    .task-card::before { display: none; }
+    .task-card .card-icon { font-size: 22px; margin-bottom: 10px; }
+    .task-card h4 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .task-card .en {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      font-family: monospace;
+    }
+    .task-card p { font-size: 14px; margin: 0; color: var(--text-sub); }
+
+    /* ─── Image ─── */
+    .img-gallery {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    @media (max-width: 540px) { .img-gallery { grid-template-columns: 1fr; } }
+    .img-frame {
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .img-frame img { width: 100%; display: block; }
+    .img-frame .img-caption {
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      background: var(--bg-alt);
+    }
+    .img-single {
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin: 20px 0;
+    }
+    .img-single img { width: 100%; display: block; }
+    .img-single .img-caption {
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      background: var(--bg-alt);
+    }
+
+    /* ─── Callout (unified) ─── */
+    .callout {
+      border-radius: 4px;
+      padding: 16px 18px;
+      margin: 18px 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+    }
+    .callout.info, .callout.warning, .callout.success {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-left: 3px solid #bbb;
+    }
+    .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; opacity: 0.6; }
+    .callout p { margin: 0; font-size: 14px; }
+
+    /* ─── Pipeline Stages ─── */
+    .pipeline {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .stage {
+      border-radius: 4px;
+      padding: 16px 20px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .stage-badge {
+      min-width: 36px;
+      height: 24px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .stage-body h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+    .stage-body p { font-size: 13.5px; margin: 0; color: var(--text-sub); }
+
+    /* ─── Steps ─── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin: 18px 0;
+      position: relative;
+    }
+    .steps::before {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 36px;
+      bottom: 36px;
+      width: 1px;
+      background: var(--border);
+    }
+    .step {
+      display: flex;
+      gap: 14px;
+      padding: 12px 0;
+    }
+    .step-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      flex-shrink: 0;
+      z-index: 1;
+      background: var(--bg);
+    }
+    .step-content { padding-top: 4px; }
+    .step-content h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+    .step-content p { font-size: 13.5px; color: var(--text-sub); margin: 0; }
+
+    /* ─── Check List ─── */
+    .check-list {
+      list-style: none;
+      margin: 14px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .check-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 14px;
+      color: var(--text-sub);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px 14px;
+    }
+    .check-list li::before {
+      content: "—";
+      color: var(--text-muted);
+      font-weight: 400;
+      flex-shrink: 0;
+    }
+
+    /* ─── Code ─── */
+    code {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: "SF Mono", "JetBrains Mono", monospace;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    /* ─── Chips ─── */
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 10px 0;
+    }
+    .chip {
+      background: var(--bg-alt);
+      color: var(--text-sub);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 3px 10px;
+      font-size: 13px;
+    }
+
+    /* ─── Divider ─── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 40px 0;
+    }
+
+    /* ─── Highlight Box ─── */
+    .highlight-box {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .highlight-box p { margin: 0; font-size: 14px; color: var(--text-sub); }
+
+    /* ─── Two-col ─── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 18px 0;
+    }
+    @media (max-width: 580px) { .two-col { grid-template-columns: 1fr; } }
+    .mini-card {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px;
+    }
+    .mini-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .mini-card p { font-size: 13.5px; margin: 0; color: var(--text-sub); }
+
+    /* ─── Footer ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ─── Bold ─── */
+    strong { color: var(--text); }
+
+    /* ─── Data Table ─── */
+    .data-table-wrap {
+      margin: 20px 0;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .data-table-wrap .table-title {
+      background: var(--bg-alt);
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+    .data-table-wrap th {
+      background: var(--bg-alt);
+      padding: 8px 14px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table-wrap td {
+      padding: 8px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      color: var(--text-sub);
+    }
+    .data-table-wrap tr:last-child td { border-bottom: none; }
+    .data-table-wrap .placeholder { color: #aaa; font-style: italic; }
+    .improve { color: var(--text); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<header>
+  <div class="header-tag">Technical Blog · Document AI</div>
+  <h1>KIE 数据集构建实践</h1>
+  <p>系统性解析关键信息抽取（KIE）的数据工程方法论——从高质量标注体系的搭建，到语义泛化与拒答能力的精细打磨</p>
+  <div class="page-links"><a href="../index.html">返回千帆技术成果</a> · 中文 | <a href="index.html">English</a></div>
+</header>
+
+<!-- ═══════════════════════ TOC ═══════════════════════ -->
+<nav class="toc-bar">
+  <ul>
+    <li><a href="#background">背景与任务定义</a></li>
+    <li><a href="#data-build">高质量数据构建</a></li>
+    <li><a href="#key-generalize">Key 语义泛化</a></li>
+    <li><a href="#rejection">拒答能力优化</a></li>
+    <li><a href="#conclusion">总结与展望</a></li>
+  </ul>
+</nav>
+
+<!-- ═══════════════════════ MAIN ═══════════════════════ -->
+<main>
+
+  <!-- § 摘要 -->
+  <section id="abstract" style="margin-bottom:48px;">
+    <div class="highlight-box" style="border-left:4px solid var(--primary);border:1px solid #bfdbfe;border-left:4px solid var(--primary);">
+      <p style="font-size:15.5px;line-height:1.9;">
+        传统 OCR 专用模型长期以来聚焦于文字识别本身，缺乏对文档进行结构化关键信息抽取（KIE）的能力；而通用 VLM 虽具备 KIE 潜力，却在 OCR 专业场景下的精度表现上差强人意。<strong>QianfanOCR</strong> 尝试打破这一困局——在保持专用模型级别的 OCR 精度的同时，将 KIE 作为核心能力纳入模型能力边界。本文系统分享了我们在 KIE 数据集构建过程中的关键工程实践，包括：<strong>涵盖混合标注、规则清洗与分布增强的全链路高质量数据构建体系</strong>，从标注合成、质量筛查到样本优化形成完整闭环，大幅抑制幻觉、提升数据质量与场景覆盖度；<strong>同义 Key 替换驱动的语义泛化策略</strong>，使模型突破字面匹配瓶颈、适应多样化字段表述；以及<strong>四阶段自动化拒答样本生成 Pipeline</strong>，赋予模型在无效字段面前"说不"的能力。实验表明，上述方案在召回率、抽取准确率与拒答精度等关键指标上均带来了可观的提升。
+      </p>
+    </div>
+  </section>
+
+  <!-- § 背景与任务定义 -->
+  <section id="background">
+    <div class="section-header">
+      <div class="section-num">01</div>
+      <h2>背景与任务定义</h2>
+    </div>
+
+    <p>
+      在文档智能领域，<strong>关键信息抽取（Key Information Extraction, KIE）</strong> 是连接"图像感知"与"结构化输出"的核心环节——其目标是将文档图像中散乱分布的视觉信息，准确转化为机器可直接消费的 <strong>Key-Value JSON</strong> 结构。根据任务范围与语义理解深度的不同，KIE 任务通常可以划分为以下两大类型：
+    </p>
+
+    <div class="task-grid">
+      <div class="task-card full">
+        <div class="card-icon">A.</div>
+        <h4>全量抽取</h4>
+        <div class="en">Full Extraction / OCR-to-Structured</div>
+        <p>强调"所见即所得"，完整捕获图像中所有可见的键值对信息。以体检报告为例，模型须精准识别每项检测科目与对应指标、数值及单位。核心难点在于复杂版面下的空间关联建模，以及长序列输出的完整性保障。</p>
+      </div>
+      <div class="task-card targeted">
+        <div class="card-icon">B.</div>
+        <h4>指定字段抽取</h4>
+        <div class="en">Targeted Field Extraction / Semantic Alignment</div>
+        <p>依据用户预定义的字段列表进行定向提取。相比全量抽取，该任务对模型的<strong>语义理解与跨模板泛化能力</strong>要求更高——模型不仅要识别文字，还必须理解用户字段与图像原始表述之间的隐含语义映射。</p>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">*</div>
+      <p>典型场景：在医保结算单中，用户期望提取的 <strong>「入院时间」</strong> 在原始单据中可能被记录为 <strong>「入院日期」</strong>，而 <strong>「医保支付」</strong> 实则对应 <strong>「基金支付合计」</strong>。字面不同、语义相同——这正是指定字段抽取最核心的挑战所在。</p>
+    </div>
+
+    <div class="img-gallery">
+      <div class="img-frame">
+        <img src="figures/full-extraction.png" alt="全量抽取示例" />
+        <div class="img-caption">全量抽取：以 JSON 格式输出 Key-Value 结构化信息</div>
+      </div>
+      <div class="img-frame">
+        <img src="figures/targeted-field-extraction.png" alt="指定字段抽取示例" />
+        <div class="img-caption">指定字段抽取：按需提取发票号码、开票日期、合计金额等</div>
+      </div>
+    </div>
+
+    <h3>为什么需要端到端 VLM？</h3>
+    <p>传统 OCR 专用视觉语言模型（如 dotsocr、glm-ocr）受训练范式和模型规模制约，通常仅能应对单一的文字识别任务，在结构化信息抽取上力不从心。而看似合理的"OCR + LLM"两阶段串联方案，实则暗藏一个根本性缺陷——<strong>版式信息在中间环节悄然丢失</strong>，由此引发一系列难以弥补的级联问题。以下仅列举两个典型场景：</p>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <h4>📌 典型问题一：Key-Value 错位</h4>
+        <p>OCR 转文本后，原始版面的空间拓扑关系随之瓦解，模型极易将本不相邻的键与值错误配对，产生"张冠李戴"的抽取结果。</p>
+      </div>
+      <div class="mini-card">
+        <h4>📌 典型问题二：复杂表格级联错误</h4>
+        <p>在多行多列的复杂表格中，OCR 阶段哪怕只有轻微的对齐偏差，都会被后续 LLM 成倍放大，最终形成难以溯源的雪崩式误差。</p>
+      </div>
+    </div>
+
+    <p style="font-size:13px;color:var(--text-muted);margin-top:8px;">除此之外，图章遮挡的语义还原、跨页内容的关联聚合、手写与印刷字体混排的统一理解等场景，也都会在"OCR → LLM"的交接缝里出现不同程度的信息损耗。上述问题仅为冰山一角。</p>
+
+    <div class="img-gallery">
+      <div class="img-frame">
+        <img src="figures/key-value-misalignment.png" alt="Key Value错位" />
+        <div class="img-caption">Key-Value 错位问题示例</div>
+      </div>
+      <div class="img-frame">
+        <img src="figures/complex-table-errors.png" alt="复杂表格抽取" />
+        <div class="img-caption">复杂表格场景的级联错误问题</div>
+      </div>
+    </div>
+
+    <div class="callout success">
+      <div class="callout-icon">*</div>
+      <p>端到端 VLM（如 <strong>QianfanOCR</strong>）将感知、理解与结构化抽取融为一体，直接在图像层面完成端到端推理，从根本上规避了中间环节导致的信息损失。在 Key-Value 对齐准确率和复杂表格鲁棒性上，均展现出对两阶段方案的显著优势。</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- § 高质量训练数据构建 -->
+  <section id="data-build">
+    <div class="section-header">
+      <div class="section-num">02</div>
+      <h2>高质量训练数据的构建</h2>
+    </div>
+
+    <p>数据是模型能力的天花板。针对全量抽取与指定字段抽取两类核心任务，我们围绕<strong>数据合成、标注质量与清洗规范</strong>三个核心维度，构建了一套端到端的高质量训练数据生产流程——不仅要"有数据"，更要"有好数据"。</p>
+
+    <div class="img-single">
+      <img src="figures/data-construction-pipeline.png" alt="数据构建流程图" />
+      <div class="img-caption">图1：高质量训练数据构建整体流程</div>
+    </div>
+
+    <h3>数据合成阶段</h3>
+    <p>我们最初的思路是直接使用大尺寸教师模型批量生成标注数据（GT）。然而实践给出了不一样的答案：在图像模糊、旋转变形、含水印干扰等复杂条件下，教师模型的幻觉率明显攀升——字段遗漏与识别错误接连出现，标注质量难以保证。</p>
+
+    <div class="callout warning">
+      <div class="callout-icon">*</div>
+      <p>为此，我们转向更稳健的<strong>混合标注方案（Hybrid Labeling Approach）</strong>：引入传统轻量 OCR 小模型作为辅助标注工具，与教师模型互为补充，通过交叉验证机制筛除低置信样本，并针对这类难样本专门构建评测集持续监控。实验数据证明，该方案在召回率和幻觉抑制两个核心指标上均实现了可观提升。</p>
+    </div>
+
+    <p>我们专门针对模糊、旋转、水印等复杂场景构建了难例评测集，对比两种标注方案在结构化字段抽取上的召回表现。在卡证、票据等高频文档类型上，混合标注方案均带来了显著的召回率提升，同时大幅压制了教师模型在难例上的幻觉输出。</p>
+
+    <div class="data-table-wrap">
+      <div class="table-title">表1：混合标注方案 vs 纯教师模型 — 复杂场景下的召回率对比</div>
+      <table>
+        <thead><tr>
+          <th>文档类型</th>
+          <th>纯教师模型</th>
+          <th>混合标注</th>
+          <th>提升</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>卡证类</td>
+            <td>~89%</td>
+            <td>~98%</td>
+            <td><span class="improve">↑约 9 pp</span></td>
+          </tr>
+          <tr>
+            <td>票据类</td>
+            <td>~85%</td>
+            <td>~94%</td>
+            <td><span class="improve">↑约 9 pp</span></td>
+          </tr>
+          <tr>
+            <td><strong>整体平均</strong></td>
+            <td colspan="2" style="text-align:center;color:var(--text-muted);">召回率绝对提升</td>
+            <td><strong><span class="improve">↑约 10 pp</span></strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>数据清洗阶段</h3>
+    <p>标注完成不等于万事大吉。我们建立了一套面向业务语义的大规模规则过滤体系，以硬性规则对每一条训练样本进行双重合规校验，从源头杜绝"脏数据"污染训练集：</p>
+
+    <ul class="check-list">
+      <li><strong>计算逻辑校验：</strong>自动识别并剔除「单价 × 数量 ≠ 总额」等数值自洽性错误，确保字段间的算术关系严格成立</li>
+      <li><strong>格式规范校验：</strong>依照行业标准核查发票号码、日期格式、身份证号等结构化字段，过滤不符合规范的异常样本</li>
+    </ul>
+
+    <div class="highlight-box">
+      <p>两道校验形成串联过滤门槛——任一不达标即直接丢弃，只有双重合格的样本才能进入最终训练集。严苛的准入标准带来的是 <strong>High Quality Training Data</strong> 的高准确性与强一致性，为模型训练提供了坚实的数据底座。</p>
+    </div>
+
+    <p>为量化数据清洗的真实收益，我们在 In-house 多场景 KIE 评测集（覆盖银行回单、增值税发票、医疗结算单、医疗发票等 7 个高频垂类）上做了一次消融对比：</p>
+
+    <div class="data-table-wrap">
+      <div class="table-title">表2：数据清洗对模型整体效果的影响（In-house 评测集平均得分）</div>
+      <table>
+        <thead><tr>
+          <th>方案</th>
+          <th>平均得分</th>
+          <th>变化</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>原始数据（Baseline）</td>
+            <td>~58.4</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>+ 数据清洗（计算逻辑 + 格式校验过滤）</td>
+            <td><strong>~62.3</strong></td>
+            <td><span class="improve">↑约 3.9</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">*</div>
+      <p>仅靠规则过滤这一道工序，模型在 7 个 In-house 子任务上的平均得分就<strong>整体提升约 3.9 个点</strong>，且在所有子任务上稳定正向——尤其在版式复杂、字段密集的长尾场景上收益最为显著。这印证了一个朴素的事实：<strong>训练数据的"干净度"，比堆数据量更影响模型的天花板</strong>。</p>
+    </div>
+
+    <h3>样本优化：分布重塑与图像增强</h3>
+    <p>标注与清洗保证了数据"质量够高"，而样本优化则要确保数据"覆盖够广"。我们从<strong>数据分布重塑</strong>与<strong>图像级增强</strong>两个维度进一步发力：</p>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <h4>📊 数据分布优化</h4>
+        <p>主动挖掘长序列明细、密集排版、多层嵌套等高难度样本并定向补充，根据场景分布动态调整训练配比——有意压低简单样本的权重，让模型在训练时充分直面边界场景，而非在"舒适区"内空转。</p>
+      </div>
+      <div class="mini-card">
+        <h4>🔄 图像增强策略</h4>
+        <p>系统引入几何变换（旋转、透视畸变、裁切抖动）与图像退化模拟（模糊、噪声、低分辨率、水印遮挡）等多维增强手段，让模型在训练阶段就充分"见过世面"，从而在扫描件、拍照件等真实场景中保持稳定表现。</p>
+      </div>
+    </div>
+
+    <div class="callout success">
+      <div class="callout-icon">*</div>
+      <p>两个维度的协同优化形成合力——分布层面的精准补齐解决了"见识不足"，增强层面的扰动模拟解决了"抗干扰力弱"，共同推动模型在复杂真实场景下的<strong>鲁棒性与泛化能力</strong>迈上新台阶。</p>
+    </div>
+
+    <p>首先看<strong>分布重塑</strong>的效果。我们对训练样本按版式复杂度进行了配比调整，让模型在长尾的复杂版式上得到充分训练。结果显示，<strong>目标场景的 F1 稳定提升约 0.7 个点</strong>，其他场景基本持平，说明分布重塑能精准命中目标版式而不会引入负迁移。</p>
+
+    <p>再看<strong>图像增强</strong>的效果。我们将训练集中重点场景的样本替换为图像增强版本（覆盖旋转、模糊、水印遮挡等扰动），保持其他训练数据完全一致，结果如下：</p>
+
+    <div class="data-table-wrap">
+      <div class="table-title">表3：图像增强的针对性消融效果</div>
+      <table>
+        <thead><tr>
+          <th>评测范围</th>
+          <th>变化</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>被增强的目标场景</td>
+            <td><span class="improve">F1 提升约 +2 ~ +4</span></td>
+          </tr>
+          <tr>
+            <td>未做增强的其他场景</td>
+            <td>基本持平（无负迁移）</td>
+          </tr>
+          <tr>
+            <td><strong>整体平均</strong></td>
+            <td><strong><span class="improve">↑约 1.1</span></strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">*</div>
+      <p>增益高度集中在<strong>被增强的目标场景</strong>上，未做增强的其他类目基本持平——一条干净的「定向增强 → 定向收益」因果链，整体平均 F1 提升约 1.1 个点。</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- § Key 语义泛化 -->
+  <section id="key-generalize">
+    <div class="section-header">
+      <div class="section-num">03</div>
+      <h2>Key 语义泛化，增强泛化能力</h2>
+    </div>
+
+    <p>现实业务中，同一个信息字段往往有着五花八门的表述方式——"入院日期"与"入院时间"语义相同，却是两个不同的字符串。若训练数据只见过其中一种写法，模型在面对陌生表述时便会束手无策，匹配率大幅跌落。</p>
+    <p>为突破这一瓶颈，我们设计了一套<strong>基于同义 Key 替换的数据增强方案</strong>，通过系统化地扩展字段表述空间，让模型真正学会"理解语义"而非"记忆字面"：</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-dot">1</div>
+        <div class="step-content">
+          <h4>同义 Key 生成</h4>
+          <p>借助大语言模型对原始字段名进行语义扩展，自动生成一批语义等价、表述各异的候选字段名，为每个原始 Key 沉淀出覆盖广泛的同义词表，作为后续数据增强的"弹药库"。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-dot">2</div>
+        <div class="step-content">
+          <h4>随机 Key 替换构造训练样本</h4>
+          <p>在数据构造时，以一定概率将 Prompt 中的字段名随机替换为同义词表中的其他表述，大规模生成"用户问法与图像写法存在偏差"的训练样本，同时在 Prompt 中明确引导模型关注语义对应而非字符串匹配，从根本上改变模型的"学习姿势"。</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>同义扩展示例</h3>
+    <div class="two-col">
+      <div class="mini-card">
+        <h4>入院日期 →</h4>
+        <div class="chips">
+          <span class="chip">入院时间</span>
+          <span class="chip">住院开始日期</span>
+          <span class="chip">入院时间节点</span>
+        </div>
+      </div>
+      <div class="mini-card">
+        <h4>基金支付合计 →</h4>
+        <div class="chips">
+          <span class="chip">医保支付</span>
+          <span class="chip">医保报销金额</span>
+          <span class="chip">统筹支付</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="img-single">
+      <img src="figures/semantic-generalization.png" alt="语义泛化效果示例" />
+      <div class="img-caption">医保结算单语义映射效果：用户字段 → 图像原始字段 → JSON 输出</div>
+    </div>
+
+    <div class="callout success">
+      <div class="callout-icon">*</div>
+      <p>经过这套增强训练，模型不再依赖字面对齐，而是真正建立起<strong>异名同义字段的语义识别能力</strong>。面对用户自定义的各类字段表述，模型能够保持稳健、准确的抽取输出，在开放字段定义场景下的泛化表现得到了质的飞跃。</p>
+    </div>
+
+    <p>为量化 Key 多样化采样的额外收益，我们在已经过数据清洗的版本之上，叠加同义 Key 替换增强，对比前后效果：</p>
+
+    <div class="data-table-wrap">
+      <div class="table-title">表4：Key 多样化采样的叠加收益（In-house 评测集平均得分）</div>
+      <table>
+        <thead><tr>
+          <th>方案</th>
+          <th>平均得分</th>
+          <th>变化</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>数据清洗后（Baseline）</td>
+            <td>~62.3</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>+ Key 多样化采样</td>
+            <td><strong>~64.0</strong></td>
+            <td><span class="improve">↑约 1.7</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <p>在数据清洗已经把分数推到 ~62.3 的基础上，<strong>Key 多样化采样再带来约 1.7 个点的二次提升</strong>，补足了字段语义泛化的最后一环。叠加前文数据清洗的 +3.9，两者合计带来约 +5.5 的整体增益，且在所有子任务上均稳定正向。</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- § 拒答能力优化 -->
+  <section id="rejection">
+    <div class="section-header">
+      <div class="section-num">04</div>
+      <h2>拒答能力优化，提升边界识别精度</h2>
+    </div>
+
+    <p>一个值得信赖的 KIE 系统，必须具备两种截然不同却同等重要的能力：准确抽取存在的字段，以及对<strong>不存在的字段果断拒答</strong>。若模型在面对无效查询时选择"蒙一个"而非"坦诚拒绝"，幻觉输出将悄然污染整份结构化结果，令用户防不胜防。</p>
+    <p>为系统性地解决这一短板，我们设计了一套<strong>基于 VLM 的自动化拒答样本生成 Pipeline</strong>，通过四阶段流水线批量构造多样化、高质量的拒答训练样本：</p>
+
+    <div class="pipeline">
+      <div class="stage">
+        <div class="stage-badge">阶段一</div>
+        <div class="stage-body">
+          <h4>拒答指示生成</h4>
+          <p>模型结合图像内容，分析原始 Prompt 的语境与风格，以六种不同的嵌入方式（如开篇说明、注意事项、输出格式约束等）将拒答指令自然融入新 Prompt。与此同时，从涵盖中英文的 16 种拒答值（如 <code>"None"</code>、<code>"N/A"</code>、<code>"该字段不存在"</code>）中随机抽取，确保模型学会以多种形式"礼貌且坚定地说不"。</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-badge">阶段二</div>
+        <div class="stage-body">
+          <h4>拒答 Key 生成</h4>
+          <p>模型在观察图像后，生成两类具有代表性的拒答字段：<strong>空值 Key</strong>（字段存在于图中但对应值为空）和<strong>虚假 Key</strong>（与文档主题相关、但图中实际并不存在的字段）。这两类字段精准模拟了真实业务中用户"过度提问"或"字段猜测"的高频场景。</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-badge">阶段三</div>
+        <div class="stage-body">
+          <h4>Key 位置随机化</h4>
+          <p>参照图像中字段的真实分布，将拒答 Key 随机穿插于原有字段序列之间，而非集中堆放在列表首尾——刻意打破位置规律，防止模型学到"出现在末尾 = 拒答"这类投机性捷径，保障字段排列的自然性与泛化性。</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-badge">阶段四</div>
+        <div class="stage-body">
+          <h4>最终样本生成</h4>
+          <p>以原始 GT 为锚点，确保已有字段值的准确无误；对拒答字段统一填入当前指定的拒答值；同时严格对齐输出字段顺序与 Prompt 保持一致，最终输出一份格式规范、标注可靠的完整训练样本。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">🔍</div>
+      <p>四个阶段各自独立引入图像内容参与决策，最大程度保证了每条样本标注的准确性与多样性。经过这套 Pipeline 的规模化生产，模型在面对无效字段时的<strong>拒答准确率</strong>显著跃升，幻觉输出的概率也得到了有效压制——模型终于学会了"知之为知之，不知为不知"。</p>
+    </div>
+
+    <div class="data-table-wrap">
+      <div class="table-title">表5：拒答优化对幻觉率的抑制效果（In-house 评测集）</div>
+      <table>
+        <thead><tr>
+          <th>核心指标</th>
+          <th>含义</th>
+          <th>优化前</th>
+          <th>优化后</th>
+          <th>变化</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>幻觉率（无中生有）</strong> ↓</td>
+            <td>编造图中并不存在的字段值</td>
+            <td>~24%</td>
+            <td><strong>~4%</strong></td>
+            <td><span class="improve">↓约 20 pp（相对 ↓约 85%）</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">*</div>
+      <p>一句话总结：拒答优化让模型从「<strong>会蒙</strong>」变成「<strong>会说不知道</strong>」——幻觉率从约 1/4 压到不足 1/25，且不影响原有的字符识别能力。</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- § 总结与展望 -->
+  <section id="conclusion">
+    <div class="section-header">
+      <div class="section-num">05</div>
+      <h2>总结与展望</h2>
+    </div>
+
+    <p>本文围绕端到端 VLM 在关键信息抽取（KIE）场景下的数据工程实践，系统阐述了我们在数据构建全链路上的核心方法与关键经验。回顾全文，主要贡献可以归纳为以下四点：</p>
+
+    <ul class="check-list">
+      <li><strong>全链路高质量数据构建：</strong>建立了覆盖"混合标注 → 规则清洗 → 分布重塑与图像增强"的完整数据生产体系——教师模型与 OCR 小模型协同标注抑制幻觉，双重校验保障数据合规，分布优化与多维增强补齐场景覆盖短板，端到端提升训练数据的质量与多样性</li>
+      <li><strong>同义 Key 语义泛化：</strong>借助 LLM 驱动的同义词扩展与随机替换策略，使模型摆脱字面匹配依赖，在开放字段定义场景下实现了稳定的语义对齐能力</li>
+      <li><strong>四阶段拒答 Pipeline：</strong>自动化构造多样化的拒答训练样本，赋予模型在无效字段面前"坦诚拒绝"的能力，有效压制幻觉输出</li>
+    </ul>
+
+    <h3>最终效果：公开 Benchmark 评测</h3>
+    <p>为了验证上述数据工程方案的综合效果，我们在五个公开 KIE 基准上对 QianfanOCR 与当前主流商用模型及同规模开源模型进行了横向评测。由于传统 OCR 专用模型缺乏原生 KIE 能力，此处不纳入对比。评测结果如下：</p>
+
+    <div class="data-table-wrap">
+      <div class="table-title">表6：公开 KIE Benchmark 性能对比（归一化得分）</div>
+      <table>
+        <thead><tr>
+          <th>Model</th><th>Overall (Mean)</th><th>OCRBench KIE</th><th>OCRBenchv2 KIE (en)</th><th>OCRBenchv2 KIE (zh)</th><th>CCOCR KIE</th><th>Nanonets KIE (F1)</th>
+        </tr></thead>
+        <tbody>
+          <tr><td><strong>Qianfan-OCR (Ours)</strong></td><td><strong>87.9</strong></td><td>95.0</td><td>82.8</td><td><strong>82.3</strong></td><td>92.8</td><td><strong>86.5</strong></td></tr>
+          <tr><td>Qwen3-4B-VL</td><td>83.5</td><td>89.0</td><td>82.1</td><td>71.3</td><td>91.6</td><td>83.3</td></tr>
+          <tr><td>Qwen3-VL-235B-A22B</td><td>84.2</td><td>94.0</td><td>85.6</td><td>62.9</td><td><strong>95.1</strong></td><td>83.8</td></tr>
+          <tr><td>Gemini-3.1-Pro</td><td>79.2</td><td><strong>96.0</strong></td><td><strong>87.8</strong></td><td>63.4</td><td>72.5</td><td>76.1</td></tr>
+          <tr><td>Gemini-3-Pro</td><td>77.0</td><td>93.5</td><td>87.1</td><td>49.6</td><td>72.7</td><td>82.1</td></tr>
+          <tr><td>Seed-2.0</td><td>78.0</td><td>92.5</td><td>75.6</td><td>48.9</td><td>89.6</td><td>83.4</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">*</div>
+      <p>QianfanOCR 在五项 KIE 基准的综合均分上以 <strong>87.9</strong> 取得最高分，超越了 Qwen3-VL-235B-A22B（84.2）、Gemini-3.1-Pro（79.2）等更大规模的商用与开源模型。尤其在中文 KIE 场景（OCRBenchv2 KIE zh: 82.3）上优势突出，相较次优的 Qwen3-4B-VL（71.3）高出 11 个点，体现了本文数据工程方案在中文文档理解上的显著增益。</p>
+    </div>
+
+    <h3>当前局限与未来方向</h3>
+    <p>尽管上述方案在实际业务中已展现出可观的提升效果，但仍存在可进一步探索的空间：</p>
+
+    <div class="two-col">
+      <div class="mini-card">
+        <h4>📐 局限性</h4>
+        <p>当前数据构建流程仍高度依赖规则驱动的清洗逻辑与启发式的增强策略，在面对全新文档类型时需要一定的人工适配成本。此外，拒答能力虽然显著提升，但在极端模糊或高度歧义场景下，模型仍存在一定比例的误判。</p>
+      </div>
+      <div class="mini-card">
+        <h4>🔮 未来探索</h4>
+        <p>我们正在探索将<strong>强化学习（RL）</strong>引入 KIE 训练流程，通过奖励建模进一步优化模型在结构化输出完整性与拒答精度之间的平衡；同时，计划借助主动学习机制实现数据生产的自适应闭环——让模型自主识别自身短板并驱动数据补充，以降低对人工标注的依赖。</p>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">📝</div>
+      <p>KIE 是文档智能走向实际业务价值的关键一环。我们相信，随着数据工程方法论的持续迭代与模型架构的不断演进，端到端 VLM 在文档理解领域将释放出更大的潜力——不只是"看得清"，更要"读得懂"、"提得准"、"拒得了"。</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+<footer>
+  <p>KIE 数据集构建技术博客 &nbsp;·&nbsp; QianfanOCR &nbsp;·&nbsp; Document AI Team</p>
+  <p style="margin-top:6px;font-size:12px;">涵盖全量抽取 · 指定字段抽取 · 混合标注 · Key语义泛化 · 拒答能力优化</p>
+</footer>
+
+</body>
+</html>
